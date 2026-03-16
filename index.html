@@ -1,73 +1,105 @@
 <!DOCTYPE html>
 <html lang="en">
-<meta name="apple-mobile-web-app-title" content="Finance Tracker">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<link rel="apple-touch-icon" href="logo.png">
-<link rel="icon" type="image/png" href="logo.png">
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>MY FIRST PROJECT</title>
+    <meta name="apple-mobile-web-app-title" content="LUYLUY">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="clover.jpg">
+    <link rel="icon" type="image/jpeg" href="clover.jpg">
+    <title>NIKOL FAMILY GOAL</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
-    
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
     
     <style>
-        :root { --bg: #EFEBE3; --card: #F7F4F0; --forest: #5B7A47; --dark-forest: #2D3E2E; --text: #1C1917; }
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: env(safe-area-inset-top) 16px 200px 16px; touch-action: manipulation; }
-        .pro-card { background: var(--card); border-radius: 40px; border: 1px solid rgba(0,0,0,0.03); box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
-        .nav-active { background-color: var(--forest) !important; color: white !important; }
-        .stock-box { width: 44px; height: 44px; border-radius: 14px; border: 2px solid #E7E5E4; display: flex; align-items: center; justify-content: center; font-weight: 800; cursor: pointer; transition: 0.2s; }
-        .stock-box.checked { background-color: var(--forest); border-color: var(--forest); color: white; }
-        input { font-size: 24px !important; border-radius: 20px; background: rgba(0,0,0,0.05); padding: 12px; text-align: right; outline: none; width: 140px; font-weight: 800; color: var(--dark-forest); border: 2px solid transparent; }
-        input:focus { background: white; border: 2px solid var(--forest); }
+        :root { --bg: #F8F7F2; --card: #FFFFFF; --forest: #4A633C; --text: #1C1917; }
+        [data-theme='dark'] { --bg: #000000; --card: #111111; --forest: #10B981; --text: #FFFFFF; }
+        
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; background-color: var(--bg); color: var(--text); 
+            margin: 0; padding: env(safe-area-inset-top) 20px 200px 20px; transition: 0.3s;
+        }
+        .pro-card { background: var(--card); border-radius: 30px; border: 1px solid rgba(0,0,0,0.05); }
+        .glass-nav { background: var(--card); border: 1px solid rgba(0,0,0,0.05); backdrop-filter: blur(12px); }
+        .stock-box { width: 44px; height: 44px; border-radius: 14px; border: 2px solid #E7E5E4; display: flex; align-items: center; justify-content: center; }
+        [data-theme='dark'] .stock-box { border-color: #262626; }
+        .stock-box.checked { background: var(--forest); border-color: var(--forest); color: white; }
+        
+        input { 
+            background: rgba(0,0,0,0.03); border-radius: 14px; padding: 8px 12px; font-weight: 800; 
+            text-align: right; color: var(--text); border: 2px solid transparent;
+        }
+        [data-theme='dark'] input { background: #1A1A1A; }
+        input:focus { outline: none; border-color: var(--forest); background: var(--card); }
+
+        .nav-btn { color: #A8A29E; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; transition: 0.3s; }
+        .nav-btn.active { background: var(--forest); color: white; }
+        #settings-panel { display: none; position: fixed; inset: 0; background: var(--bg); z-index: 100; padding: 40px 20px; overflow-y: auto; }
+        
+        /* Reduced Brand Size styling */
+        .brand-text { font-size: 24px; font-weight: 900; letter-spacing: -0.04em; line-height: 1; }
     </style>
-<link rel="manifest" href="manifest.json">
+</head>
 <body class="max-w-md mx-auto">
 
-    <header class="pt-8 mb-6">
-        <div class="flex justify-between items-start mb-6">
-            <div>
-                <h1 class="text-4xl font-black tracking-tighter text-[#2D3E2E]">Ledger.</h1>
-                <div class="flex items-center mt-2">
-                    <span class="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse mr-2"></span>
-                    <p id="countdown" class="text-xs font-bold text-stone-500 uppercase tracking-widest"></p>
+    <div id="settings-panel">
+        <div class="flex justify-between items-center mb-8">
+            <h2 class="text-2xl font-black">Configuration</h2>
+            <button onclick="toggleSettings()" class="bg-stone-500/10 p-3 rounded-full">✕</button>
+        </div>
+        <div class="space-y-6">
+            <div class="bg-stone-500/5 p-6 rounded-3xl">
+                <p class="text-[10px] font-black uppercase text-stone-400 mb-4">Interface Theme</p>
+                <div class="flex bg-stone-500/10 p-1 rounded-xl gap-1">
+                    <button onclick="setTheme('light')" class="flex-1 py-2 rounded-lg text-[10px] font-bold" id="t-light">DAY</button>
+                    <button onclick="setTheme('dark')" class="flex-1 py-2 rounded-lg text-[10px] font-bold" id="t-dark">DARK</button>
                 </div>
             </div>
-            <div class="text-right">
-                <span id="top-label" class="bg-[#FDE68A] text-[#92400E] px-4 py-1.5 rounded-full text-[10px] font-black uppercase">Goal</span>
-                <p id="top-amount" class="text-3xl font-black text-[#92400E] mt-1">610,000 KHR</p>
+            <div class="bg-stone-500/5 p-6 rounded-3xl">
+                <p class="text-[10px] font-black uppercase text-stone-400 mb-4">Brand Identity</p>
+                <input type="text" id="brand-input" class="w-full !text-left">
             </div>
+            <div id="category-settings" class="space-y-4"></div>
         </div>
+        <button onclick="saveSettings()" class="w-full bg-forest text-white py-4 rounded-3xl font-bold mt-10 shadow-lg">Save All Changes</button>
+    </div>
 
-        <nav class="bg-[#E7E5E4]/50 p-2 flex gap-1 rounded-[30px]">
-            <button onclick="switchPage('main')" id="btn-main" class="flex-1 py-4 rounded-[24px] text-sm font-bold text-stone-600 transition-all">Main</button>
-            <button onclick="switchPage('moto')" id="btn-moto" class="flex-1 py-4 rounded-[24px] text-sm font-bold text-stone-600 transition-all">Moto</button>
-            <button onclick="switchPage('snack')" id="btn-snack" class="flex-1 py-4 rounded-[24px] text-sm font-bold text-stone-600 transition-all">Snack</button>
-        </nav>
+    <header class="pt-10 mb-6">
+        <div class="flex justify-between items-start mb-6">
+            <div onclick="toggleMonth()" style="cursor:pointer">
+                <h1 id="brand-label" class="brand-text">Ledger.</h1>
+                <p id="countdown" class="text-[9px] font-black text-stone-400 mt-0.5 tracking-widest uppercase"></p>
+            </div>
+            <button onclick="toggleSettings()" class="opacity-20 text-xl">⚙️</button>
+        </div>
+        <div class="h-1.5 w-full bg-stone-200 rounded-full overflow-hidden mb-8">
+            <div id="progress-bar" class="h-full bg-[var(--forest)] transition-all duration-700" style="width: 0%"></div>
+        </div>
+        <nav id="navbar" class="glass-nav p-1.5 flex gap-1 rounded-[28px] sticky top-4 z-40"></nav>
     </header>
 
-    <main id="app-container" class="space-y-4"></main>
+    <main id="content" class="space-y-4"></main>
 
-    <footer class="fixed bottom-6 left-4 right-4 max-w-md mx-auto z-50">
-        <div class="bg-[#2D3E2E] text-white p-8 rounded-[45px] shadow-2xl border-t border-white/10">
-            <div class="flex justify-between items-end">
+    <footer class="fixed bottom-6 left-5 right-5 max-w-md mx-auto z-50">
+        <div class="bg-[#1C1917] text-white p-7 rounded-[40px] shadow-2xl">
+            <div class="flex justify-between items-center">
                 <div>
-                    <p id="footer-label" class="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-1"></p>
-                    <p id="footer-amount" class="text-4xl font-black tracking-tighter leading-none">-- KHR</p>
+                    <p id="foot-tag" class="text-[9px] font-bold text-white/40 uppercase tracking-widest mb-1"></p>
+                    <p id="foot-val" class="text-3xl font-black tracking-tighter leading-none">-- KHR</p>
                 </div>
-                <div class="text-right">
-                    <p id="payday-date" class="text-sm font-black mb-1"></p>
-                    <p id="sync-status" class="text-[9px] text-stone-400 uppercase font-bold tracking-widest">Connecting...</p>
+                <div class="text-right opacity-40">
+                    <p id="foot-date" class="text-[10px] font-bold mb-1"></p>
+                    <p class="text-[9px] font-black uppercase tracking-tighter">Nikol Family Goal</p>
                 </div>
             </div>
         </div>
     </footer>
 
     <script>
-        // --- 1. FIREBASE CONFIGURATION (Updated from your screenshots) ---
         const firebaseConfig = {
             apiKey: "AIzaSyCBhtDe3ovmoC70IVS0zPXVgTbg5OX3_9k",
             authDomain: "gentle-impulse-454415-d7.firebaseapp.com",
@@ -75,136 +107,183 @@
             storageBucket: "gentle-impulse-454415-d7.firebasestorage.app",
             messagingSenderId: "816479667222",
             appId: "1:816479667222:web:8b7eb363fc7301912f2137",
-            // Corrected Singapore Region URL
             databaseURL: "https://gentle-impulse-454415-d7-default-rtdb.asia-southeast1.firebasedatabase.app"
         };
 
-        const CONFIG = {
-            main: { budget: 610000, items: [
-                {id:'item1', label:'Formular', target:8, price:60000},
-                {id:'item2', label:'Diaper', target:6, price:12000},
-                {id:'item3', label:'Water', target:19, price:3000}
-            ]},
-            moto: { budget: 150000 },
-            snack: { budget: 240000 }
+        let CONFIG = { 
+            _brand: "Ledger.", _theme: "light",
+            main: { label: "NIKOL", budget: 610000, items: [{id:'i1', label:'Formula', target:8, price:60000},{id:'i2', label:'Diaper', target:6, price:12000},{id:'i3', label:'Water', target:19, price:3000}] },
+            moto: { label: "Moto", budget: 200000 },
+            snack: { label: "Snack", budget: 150000 }
         };
+        
+        let state = { page: 'main', viewOffset: 0, dbData: {} };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
 
-        // --- 2. STATE & DATABASE ---
-        let state = { 
-            page: 'main', 
-            dbData: JSON.parse(localStorage.getItem('my_project_ledger')) || {} 
-        };
-
-        let db = null;
-        try {
-            firebase.initializeApp(firebaseConfig);
-            db = firebase.database();
-            document.getElementById('sync-status').innerText = "Live Global Sync";
-
-            // Sync from Cloud
-            db.ref('project_shared_data').on('value', (snap) => {
-                if (snap.exists()) {
-                    state.dbData = snap.val();
-                    localStorage.setItem('my_project_ledger', JSON.stringify(state.dbData));
-                    render();
-                }
-            });
-        } catch (e) {
-            console.error(e);
-            document.getElementById('sync-status').innerText = "Local Mode";
-        }
+        db.ref('project_shared_data').on('value', snap => {
+            if (snap.exists()) {
+                state.dbData = snap.val();
+                if(state.dbData._config) CONFIG = state.dbData._config;
+                document.documentElement.setAttribute('data-theme', CONFIG._theme);
+                document.getElementById('brand-label').innerText = CONFIG._brand;
+                render();
+            }
+        });
 
         function getCycle() {
             const now = new Date();
-            let year = now.getFullYear();
-            let month = now.getMonth();
-            if (now.getDate() < 11) month -= 1; 
-            const start = new Date(year, month, 11);
-            const end = new Date(year, month + 1, 10);
-            const id = `${start.getFullYear()}-${(start.getMonth() + 1).toString().padStart(2, '0')}`;
-            return { start, end, id };
+            let month = now.getMonth() + state.viewOffset;
+            if (now.getDate() < 11 && state.viewOffset === 0) month -= 1;
+            const start = new Date(now.getFullYear(), month, 11);
+            const end = new Date(now.getFullYear(), month + 1, 10);
+            return { start, end, id: `${start.getFullYear()}-${(start.getMonth()+1).toString().padStart(2,'0')}` };
         }
 
-        // --- 3. UI RENDERING ---
-        function switchPage(p) { state.page = p; render(); }
+        function toggleMonth() { state.viewOffset = (state.viewOffset === 0) ? 1 : 0; render(); }
+        function setTheme(t) { CONFIG._theme = t; document.documentElement.setAttribute('data-theme', t); }
 
         function render() {
-            const cycle = getCycle();
-            const cycleData = state.dbData[cycle.id] || { stock: {}, logs: {} };
-            const container = document.getElementById('app-container');
+            const cyc = getCycle();
+            const data = state.dbData[cyc.id] || { stock:{}, logs:{}, inc: {total:0, save:0, fam:0} };
+            const pages = [...Object.keys(CONFIG).filter(k=>!k.startsWith('_')), 'inc'];
             
-            const daysLeft = Math.ceil((cycle.end - new Date()) / (1000*60*60*24));
-            document.getElementById('countdown').innerText = `${daysLeft} DAYS LEFT`;
-            document.getElementById('payday-date').innerText = `End Date: ${cycle.end.toLocaleDateString('en-US', {month:'short', day:'numeric'})}`;
+            document.getElementById('navbar').innerHTML = pages.map(p => `
+                <button onclick="state.page='${p}';render()" class="nav-btn flex-1 py-3 rounded-[22px] ${state.page===p?'active':''}">
+                    ${p==='inc'?'Income':CONFIG[p].label}
+                </button>`).join('');
 
-            document.querySelectorAll('nav button').forEach(b => b.classList.remove('nav-active'));
-            document.getElementById(`btn-${state.page}`).classList.add('nav-active');
+            const diff = Math.ceil((cyc.end - new Date())/86400000);
+            document.getElementById('countdown').innerText = state.viewOffset === 0 ? `${diff} Days Left` : `Planning: ${cyc.start.toLocaleDateString('en-US',{month:'long'})}`;
+            document.getElementById('foot-date').innerText = `Ends ${cyc.end.toLocaleDateString('en-US',{month:'short', day:'numeric'})}`;
 
-            if (state.page === 'main') {
-                let spent = 0;
-                CONFIG.main.items.forEach(item => spent += (cycleData.stock?.[item.id] || 0) * item.price);
-                document.getElementById('top-amount').innerText = `610,000 KHR`;
-                document.getElementById('footer-label').innerText = "MAIN BUDGET LEFT";
-                document.getElementById('footer-amount').innerText = `${(CONFIG.main.budget - spent).toLocaleString()} KHR`;
-                
-                container.innerHTML = CONFIG.main.items.map(item => {
-                    const count = cycleData.stock?.[item.id] || 0;
-                    let boxes = '';
-                    for(let i=1; i<=item.target; i++) {
-                        boxes += `<div onclick="upStock('${cycle.id}','${item.id}',${i})" class="stock-box ${count >= i ? 'checked' : 'text-stone-300'}">✓</div>`;
-                    }
-                    return `<div class="pro-card p-8"><div class="flex justify-between items-center mb-6"><div><h3 class="font-black text-xl text-[#2D3E2E]">${item.label}</h3><p class="text-[10px] text-stone-400 font-black mt-1 uppercase tracking-widest">${item.price.toLocaleString()} KHR</p></div><p class="text-[#92400E] font-extrabold">-${((item.target - count) * item.price).toLocaleString()} KHR</p></div><div class="flex flex-wrap gap-3">${boxes}</div></div>`;
-                }).join('');
-            } else {
-                let spentTotal = 0;
-                Object.values(cycleData.logs || {}).forEach(d => spentTotal += (d[state.page] || 0));
-                document.getElementById('top-amount').innerText = `${CONFIG[state.page].budget.toLocaleString()} KHR`;
-                document.getElementById('footer-label').innerText = `${state.page.toUpperCase()} BUDGET LEFT`;
-                document.getElementById('footer-amount').innerText = `${(CONFIG[state.page].budget - spentTotal).toLocaleString()} KHR`;
-                
-                let html = ``, curr = new Date(cycle.start);
-                while(curr <= cycle.end) {
-                    const dKey = curr.toISOString().split('T')[0];
-                    const val = cycleData.logs?.[dKey]?.[state.page] || 0;
-                    html += `<div class="pro-card p-6 flex justify-between items-center ${curr < new Date().setHours(0,0,0,0) ? 'opacity-30' : ''}"><div><p class="text-xs font-black text-stone-400 uppercase tracking-widest mb-1">DAILY LOG</p><h3 class="font-black text-lg text-[#2D3E2E]">${curr.toLocaleDateString('en-US',{weekday:'short', month:'short', day:'numeric'})}</h3></div><input type="number" value="${val || ''}" placeholder="0" onchange="upLog('${cycle.id}','${dKey}',this.value)"></div>`;
-                    curr.setDate(curr.getDate()+1);
-                }
-                container.innerHTML = html;
+            if(state.page === 'inc') renderIncome(cyc, data);
+            else if(state.page === 'main') renderMain(cyc, data);
+            else renderDaily(cyc, data);
+        }
+
+        function renderIncome(cyc, data) {
+            const i = data.inc || {total:0, save:0, fam:0};
+            const wifi = 61500;
+            const catKeys = Object.keys(CONFIG).filter(k=>!k.startsWith('_'));
+            let catTotal = 0;
+            catKeys.forEach(k => catTotal += CONFIG[k].budget);
+            const leftover = i.total - (i.save + i.fam + wifi + catTotal);
+
+            let budgetSummary = catKeys.map(k => `
+                <div class="flex justify-between text-xs font-bold">
+                    <span>${CONFIG[k].label} Budget</span>
+                    <span>-${CONFIG[k].budget.toLocaleString()}</span>
+                </div>
+            `).join('');
+
+            document.getElementById('content').innerHTML = `
+                <div class="pro-card p-8 space-y-6">
+                    <h2 class="text-xl font-black">Monthly Allocation</h2>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center"><p class="font-bold">Total Salary</p>
+                        <input type="number" class="w-32" value="${i.total}" onchange="upInc('${cyc.id}','total',this.value)"></div>
+                        
+                        <div class="pt-2 space-y-3 opacity-60">
+                            ${budgetSummary}
+                            <div class="flex justify-between text-xs font-bold"><span>WiFi (Fixed 15$)</span><span>-61,500</span></div>
+                        </div>
+
+                        <div class="flex justify-between items-center pt-2 border-t border-stone-100">
+                            <p class="font-bold">Saving</p><input type="number" class="w-32" value="${i.save}" onchange="upInc('${cyc.id}','save',this.value)">
+                        </div>
+                        <div class="flex justify-between items-center border-b border-stone-100 pb-4">
+                            <p class="font-bold">Family</p><input type="number" class="w-32" value="${i.fam}" onchange="upInc('${cyc.id}','fam',this.value)">
+                        </div>
+                    </div>
+                    <div class="pt-4">
+                        <p class="text-[10px] font-black opacity-30 uppercase tracking-widest mb-1">Leftover Cash</p>
+                        <p class="text-3xl font-black ${leftover<0?'text-red-500':''}">${leftover.toLocaleString()} KHR</p>
+                    </div>
+                </div>`;
+            updateUI(leftover, i.total, "Balance");
+        }
+
+        function renderMain(cyc, data) {
+            let spent = 0;
+            CONFIG.main.items.forEach(item => spent += (data.stock?.[item.id] || 0) * item.price);
+            document.getElementById('content').innerHTML = CONFIG.main.items.map(item => {
+                const count = data.stock?.[item.id] || 0;
+                let boxes = '';
+                for(let i=1; i<=item.target; i++) boxes += `<div onclick="upStock('${cyc.id}','${item.id}',${i})" class="stock-box ${count>=i?'checked':'opacity-20'}">✓</div>`;
+                return `<div class="pro-card p-6 mb-4"><div class="flex justify-between mb-4"><div><h3 class="font-bold">${item.label}</h3><p class="text-[10px] opacity-30 font-bold">${item.price.toLocaleString()} KHR</p></div></div><div class="flex flex-wrap gap-2">${boxes}</div></div>`;
+            }).join('');
+            updateUI(CONFIG.main.budget - spent, CONFIG.main.budget, CONFIG.main.label);
+        }
+
+        function renderDaily(cyc, data) {
+            let spent = 0;
+            Object.values(data.logs || {}).forEach(d => spent += (d[state.page] || 0));
+            let html = ``, curr = new Date(cyc.start);
+            while(curr <= cyc.end) {
+                const dKey = curr.toISOString().split('T')[0];
+                const val = data.logs?.[dKey]?.[state.page] || 0;
+                html += `<div class="pro-card p-4 flex justify-between items-center mb-2 ${curr < new Date().setHours(0,0,0,0)?'opacity-20':''}">
+                    <p class="font-bold text-sm">${curr.toLocaleDateString('en-US',{weekday:'short', day:'numeric'})}</p>
+                    <input type="number" value="${val||''}" placeholder="0" onchange="upLog('${cyc.id}','${dKey}',this.value)">
+                </div>`;
+                curr.setDate(curr.getDate()+1);
             }
+            document.getElementById('content').innerHTML = html;
+            updateUI(CONFIG[state.page].budget - spent, CONFIG[state.page].budget, CONFIG[state.page].label);
         }
 
-        // --- 4. DATA UPDATES ---
-        function pushUpdate() {
-            localStorage.setItem('my_project_ledger', JSON.stringify(state.dbData));
-            if (db) db.ref('project_shared_data').set(state.dbData);
-            render();
+        function updateUI(rem, total, label) {
+            document.getElementById('progress-bar').style.width = `${Math.max(0, (rem/total)*100)}%`;
+            document.getElementById('foot-tag').innerText = label + " Remaining";
+            document.getElementById('foot-val').innerText = `${rem.toLocaleString()} KHR`;
         }
+
+        window.upInc = (cid, k, v) => {
+            if(!state.dbData[cid]) state.dbData[cid] = {};
+            if(!state.dbData[cid].inc) state.dbData[cid].inc = {total:0, save:0, fam:0};
+            state.dbData[cid].inc[k] = parseInt(v) || 0;
+            db.ref('project_shared_data').set(state.dbData);
+        };
 
         window.upStock = (cid, id, v) => {
-            if(!state.dbData[cid]) state.dbData[cid] = {stock:{}, logs:{}};
-            if(!state.dbData[cid].stock) state.dbData[cid].stock = {};
+            if(!state.dbData[cid]) state.dbData[cid] = {stock:{}};
             state.dbData[cid].stock[id] = (state.dbData[cid].stock[id] === v) ? v - 1 : v;
-            pushUpdate();
+            db.ref('project_shared_data').set(state.dbData);
         };
 
         window.upLog = (cid, dk, v) => {
-            if(!state.dbData[cid]) state.dbData[cid] = {stock:{}, logs:{}};
-            if(!state.dbData[cid].logs) state.dbData[cid].logs = {};
+            if(!state.dbData[cid]) state.dbData[cid] = {logs:{}};
             if(!state.dbData[cid].logs[dk]) state.dbData[cid].logs[dk] = {};
             state.dbData[cid].logs[dk][state.page] = parseInt(v) || 0;
-            pushUpdate();
+            db.ref('project_shared_data').set(state.dbData);
         };
 
-        render();
+        function toggleSettings() {
+            const p = document.getElementById('settings-panel');
+            const isOpen = p.style.display === 'block';
+            p.style.display = isOpen ? 'none' : 'block';
+            if(!isOpen) {
+                document.getElementById('brand-input').value = CONFIG._brand;
+                document.getElementById('category-settings').innerHTML = Object.keys(CONFIG).filter(k => !k.startsWith('_')).map(k => `
+                    <div class="bg-stone-500/5 p-4 rounded-2xl">
+                        <p class="text-[9px] font-black opacity-40 mb-2 uppercase">${k} Category</p>
+                        <input type="text" id="n-${k}" value="${CONFIG[k].label}" class="w-full mb-2 !text-left">
+                        <input type="number" id="b-${k}" value="${CONFIG[k].budget}" class="w-full !text-left">
+                    </div>`).join('');
+            }
+        }
+
+        function saveSettings() {
+            CONFIG._brand = document.getElementById('brand-input').value;
+            Object.keys(CONFIG).filter(k => !k.startsWith('_')).forEach(k => {
+                CONFIG[k].label = document.getElementById(`n-${k}`).value;
+                CONFIG[k].budget = parseInt(document.getElementById(`b-${k}`).value);
+            });
+            state.dbData._config = CONFIG;
+            db.ref('project_shared_data').set(state.dbData);
+            toggleSettings();
+        }
     </script>
 </body>
-
 </html>
-<link rel="apple-touch-icon" href="clover.jpg">
-
-<link rel="icon" type="image/jpeg" href="clover.jpg">
-
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="apple-mobile-web-app-title" content="LUYLUY Tracker">
-
