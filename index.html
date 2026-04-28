@@ -39,8 +39,6 @@
         .nav-btn { color: #A8A29E; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; transition: 0.3s; }
         .nav-btn.active { background: var(--forest); color: white; }
         #settings-panel { display: none; position: fixed; inset: 0; background: var(--bg); z-index: 100; padding: 40px 20px; overflow-y: auto; }
-        
-        /* Reduced Brand Size styling */
         .brand-text { font-size: 24px; font-weight: 900; letter-spacing: -0.04em; line-height: 1; }
     </style>
 </head>
@@ -133,11 +131,23 @@
 
         function getCycle() {
             const now = new Date();
-            let month = now.getMonth() + state.viewOffset;
-            if (now.getDate() < 11 && state.viewOffset === 0) month -= 1;
-            const start = new Date(now.getFullYear(), month, 11);
-            const end = new Date(now.getFullYear(), month + 1, 10);
-            return { start, end, id: `${start.getFullYear()}-${(start.getMonth()+1).toString().padStart(2,'0')}` };
+            let year = now.getFullYear();
+            let month = now.getMonth();
+            
+            // Adjust month based on toggle (Current vs Next)
+            month += state.viewOffset;
+
+            // Logic for the "11th to 10th" financial cycle
+            if (now.getDate() < 11 && state.viewOffset === 0) {
+                month -= 1;
+            }
+
+            const start = new Date(year, month, 11);
+            const end = new Date(year, month + 1, 10);
+            
+            // Fixed ID format to ensure April is 04, May is 05
+            const cycleId = `${start.getFullYear()}-${(start.getMonth()+1).toString().padStart(2,'0')}`;
+            return { start, end, id: cycleId };
         }
 
         function toggleMonth() { state.viewOffset = (state.viewOffset === 0) ? 1 : 0; render(); }
@@ -168,7 +178,7 @@
             const catKeys = Object.keys(CONFIG).filter(k=>!k.startsWith('_'));
             let catTotal = 0;
             catKeys.forEach(k => catTotal += CONFIG[k].budget);
-            const leftover = i.total - (i.save + i.fam + wifi + catTotal);
+            const leftover = (Number(i.total) || 0) - ((Number(i.save)||0) + (Number(i.fam)||0) + wifi + catTotal);
 
             let budgetSummary = catKeys.map(k => `
                 <div class="flex justify-between text-xs font-bold">
@@ -201,7 +211,7 @@
                         <p class="text-3xl font-black ${leftover<0?'text-red-500':''}">${leftover.toLocaleString()} KHR</p>
                     </div>
                 </div>`;
-            updateUI(leftover, i.total, "Balance");
+            updateUI(leftover, (Number(i.total)||1), "Balance");
         }
 
         function renderMain(cyc, data) {
@@ -218,14 +228,20 @@
 
         function renderDaily(cyc, data) {
             let spent = 0;
-            Object.values(data.logs || {}).forEach(d => spent += (d[state.page] || 0));
+            if (data.logs) {
+                Object.values(data.logs).forEach(d => {
+                    if (d[state.page]) spent += Number(d[state.page]);
+                });
+            }
+
             let html = ``, curr = new Date(cyc.start);
             while(curr <= cyc.end) {
                 const dKey = curr.toISOString().split('T')[0];
                 const val = data.logs?.[dKey]?.[state.page] || 0;
-                html += `<div class="pro-card p-4 flex justify-between items-center mb-2 ${curr < new Date().setHours(0,0,0,0)?'opacity-20':''}">
+                const isPast = curr < new Date().setHours(0,0,0,0);
+                html += `<div class="pro-card p-4 flex justify-between items-center mb-2 ${isPast ? 'opacity-30' : ''}">
                     <p class="font-bold text-sm">${curr.toLocaleDateString('en-US',{weekday:'short', day:'numeric'})}</p>
-                    <input type="number" value="${val||''}" placeholder="0" onchange="upLog('${cyc.id}','${dKey}',this.value)">
+                    <input type="number" value="${val || ''}" placeholder="0" onchange="upLog('${cyc.id}','${dKey}',this.value)">
                 </div>`;
                 curr.setDate(curr.getDate()+1);
             }
@@ -234,29 +250,38 @@
         }
 
         function updateUI(rem, total, label) {
-            document.getElementById('progress-bar').style.width = `${Math.max(0, (rem/total)*100)}%`;
+            const percentage = (rem / total) * 100;
+            document.getElementById('progress-bar').style.width = `${Math.max(0, Math.min(100, percentage))}%`;
             document.getElementById('foot-tag').innerText = label + " Remaining";
-            document.getElementById('foot-val').innerText = `${rem.toLocaleString()} KHR`;
+            document.getElementById('foot-val').innerText = `${Math.floor(rem).toLocaleString()} KHR`;
         }
 
         window.upInc = (cid, k, v) => {
-            if(!state.dbData[cid]) state.dbData[cid] = {};
+            if(!state.dbData[cid]) state.dbData[cid] = { inc: {total:0, save:0, fam:0} };
             if(!state.dbData[cid].inc) state.dbData[cid].inc = {total:0, save:0, fam:0};
-            state.dbData[cid].inc[k] = parseInt(v) || 0;
-            db.ref('project_shared_data').set(state.dbData);
+            state.dbData[cid].inc[k] = Number(v) || 0;
+            db.ref('project_shared_data').update(state.dbData);
         };
 
         window.upStock = (cid, id, v) => {
-            if(!state.dbData[cid]) state.dbData[cid] = {stock:{}};
+            if(!state.dbData[cid]) state.dbData[cid] = { stock: {} };
+            if(!state.dbData[cid].stock) state.dbData[cid].stock = {};
             state.dbData[cid].stock[id] = (state.dbData[cid].stock[id] === v) ? v - 1 : v;
-            db.ref('project_shared_data').set(state.dbData);
+            db.ref('project_shared_data').update(state.dbData);
         };
 
         window.upLog = (cid, dk, v) => {
-            if(!state.dbData[cid]) state.dbData[cid] = {logs:{}};
+            // CRITICAL FIX: Ensure the month structure exists before writing
+            if(!state.dbData[cid]) state.dbData[cid] = { logs: {} };
+            if(!state.dbData[cid].logs) state.dbData[cid].logs = {};
             if(!state.dbData[cid].logs[dk]) state.dbData[cid].logs[dk] = {};
-            state.dbData[cid].logs[dk][state.page] = parseInt(v) || 0;
-            db.ref('project_shared_data').set(state.dbData);
+            
+            state.dbData[cid].logs[dk][state.page] = Number(v) || 0;
+            
+            // Using update instead of set to prevent overwriting other months
+            db.ref(`project_shared_data/${cid}/logs/${dk}`).update({
+                [state.page]: Number(v) || 0
+            });
         };
 
         function toggleSettings() {
@@ -278,10 +303,10 @@
             CONFIG._brand = document.getElementById('brand-input').value;
             Object.keys(CONFIG).filter(k => !k.startsWith('_')).forEach(k => {
                 CONFIG[k].label = document.getElementById(`n-${k}`).value;
-                CONFIG[k].budget = parseInt(document.getElementById(`b-${k}`).value);
+                CONFIG[k].budget = Number(document.getElementById(`b-${k}`).value);
             });
             state.dbData._config = CONFIG;
-            db.ref('project_shared_data').set(state.dbData);
+            db.ref('project_shared_data').update({ _config: CONFIG });
             toggleSettings();
         }
     </script>
